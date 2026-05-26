@@ -1,12 +1,17 @@
+#include <algorithm>
+#include <climits>
 #include <fstream>
+#include <functional>
 #include <iostream>
+#include <queue>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 struct Edge {
   std::string line;
-  std::string taget;
+  std::string target;
   int weight;
 };
 
@@ -33,6 +38,7 @@ std::vector<std::string> split(const char *buffer) {
     if (*buffer == '"') {
       counter += 1;
       buffer += 1;
+      continue;
     }
 
     if (*buffer == ' ') {
@@ -90,44 +96,107 @@ std::unordered_map<std::string, std::vector<Edge>> load_data(const char *path) {
 
       if (i + 3 <= items.size()) {
         umap[items[i]].emplace_back(
-            Edge{.line = items[0], .taget = items[i + 2], .weight = ttn});
+            Edge{.line = items[0], .target = items[i + 2], .weight = ttn});
       }
 
       if (i > 2) {
         umap[items[i]].emplace_back(
-            Edge{.line = items[0], .taget = items[i - 2], .weight = ttp});
+            Edge{.line = items[0], .target = items[i - 2], .weight = ttp});
       }
     }
-
-    break;
   }
 
   return umap;
 }
 
+std::pair<std::unordered_map<std::string, std::string>,
+          std::unordered_map<std::string, int>>
+djikstar(const std::string &start, const std::string &end,
+         const std::unordered_map<std::string, std::vector<Edge>> &graph) {
+  std::unordered_map<std::string, int> distance;
+  std::unordered_map<std::string, std::string> previous;
+  std::priority_queue<std::pair<int, std::string>,
+                      std::vector<std::pair<int, std::string>>, std::greater<>>
+      pq;
+
+  for (auto pair : graph) {
+    distance[pair.first] = INT_MAX;
+  }
+  distance[start] = 0;
+
+  pq.push({0, start});
+
+  while (!pq.empty()) {
+    auto [dist, station] = pq.top();
+    pq.pop();
+
+    if (dist > distance[station]) {
+      continue;
+    }
+
+    if (station == end) {
+      break;
+    }
+
+    for (const Edge &edge : graph.at(station)) {
+      int new_dist = dist + edge.weight;
+
+      if (new_dist < distance[edge.target]) {
+        distance[edge.target] = new_dist;
+        previous[edge.target] = station;
+        pq.push({new_dist, edge.target});
+      }
+    }
+  }
+
+  return {previous, distance};
+}
+
+void print_path(const std::string &start, const std::string &end,
+                const std::unordered_map<std::string, std::string> &previous,
+                const std::unordered_map<std::string, int> &distance) {
+  std::vector<std::string> path;
+  std::string current = end;
+
+  while (current != start) {
+    path.push_back(current);
+    current = previous.at(current);
+  }
+  path.push_back(start);
+
+  std::reverse(path.begin(), path.end());
+
+  for (auto it = path.begin(); it != path.end(); it++) {
+    std::cout << *it;
+
+    if (std::next(it) != path.end()) {
+      std::cout << " -> ";
+    }
+  }
+
+  std::cout << "\nTotal: " << distance.at(end);
+}
+
 int main(int argc, char *argv[]) {
-  std::unordered_map<std::string, std::vector<Edge>> umap;
+  std::unordered_map<std::string, std::vector<Edge>> graph;
 
   if (argc < 3) {
     std::cout << "Invalid arguments\n"
               << "find_path <file> <start> <end>";
   }
 
-  umap = load_data(argv[1]);
+  graph = load_data(argv[1]);
+  std::string start(argv[2]);
+  std::string end(argv[3]);
 
-  std::cout << "key 1: " << argv[2] << '\n';
-  std::cout << "key 2: " << argv[3] << '\n';
-
-  for (auto edge : umap) {
-    std::cout << edge.first << ":\n";
-
-    for (auto edge : edge.second) {
-      std::cout << "  " << edge.line << ' ' << edge.taget << ' ' << edge.weight
-                << '\n';
-    }
-
-    // std::cout << '\n';
+  if (graph.find(start) == graph.end() || graph.find(end) == graph.end()) {
+    std::cerr << "Invalid stations";
+    return -1;
   }
+
+  auto [prev, dist] = djikstar(start, end, graph);
+
+  print_path(start, end, prev, dist);
 
   return 0;
 }
