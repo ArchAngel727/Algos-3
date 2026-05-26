@@ -1,17 +1,13 @@
-#include <exception>
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
-struct Station {
-  std::string name;
-  int time_to_next;
-};
-
-struct Line {
-  std::string name;
-  std::vector<Station> stations;
+struct Edge {
+  std::string line;
+  std::string taget;
+  int weight;
 };
 
 std::vector<std::string> split(const char *buffer) {
@@ -36,6 +32,7 @@ std::vector<std::string> split(const char *buffer) {
 
     if (*buffer == '"') {
       counter += 1;
+      buffer += 1;
     }
 
     if (*buffer == ' ') {
@@ -61,53 +58,55 @@ std::vector<std::string> split(const char *buffer) {
   return vec;
 }
 
-std::vector<Line> load_data(const char *path) {
+std::unordered_map<std::string, std::vector<Edge>> load_data(const char *path) {
   std::ifstream infile(path);
   std::string line;
   std::string str;
   std::vector<std::string> items;
 
-  std::vector<Line> lines;
-  std::vector<Station> stations;
-  std::string line_name;
-  std::string station_name;
+  std::unordered_map<std::string, std::vector<Edge>> umap;
   int ttn = 0;
+  size_t window_size = 3;
 
+  // Sliding window inspired
   while (std::getline(infile, str)) {
     items = split(str.c_str());
-    line_name = items[0];
+    std::vector<Edge> edges;
 
-    for (int i = 1; i < items.size(); i++) {
-      station_name = items[i];
-
+    for (size_t i = 1; i < items.size() - window_size; i += 2) {
       if (i + 1 == items.size()) {
         ttn = 0;
       } else {
         try {
-          ttn = std::stoi(items[++i]);
+          ttn = std::stoi(items[i + 1]);
         } catch (std::exception &) {
         }
       }
 
-      stations.emplace_back(Station{.name = station_name, .time_to_next = ttn});
+      edges.emplace_back(
+          Edge{.line = items[0], .taget = items[i], .weight = ttn});
     }
 
-    lines.emplace_back(Line{.name = line_name, .stations = stations});
+    umap.insert({items[0], edges});
+    break;
   }
 
-  return lines;
+  return umap;
 }
 
 int main(int argc, char *argv[]) {
-  auto lines = load_data(argv[1]);
+  std::unordered_map<std::string, std::vector<Edge>> umap;
 
-  std::cout << lines.size();
+  if (argc >= 1) {
+    umap = load_data(argv[1]);
+  }
 
-  for (auto line : lines) {
-    for (auto station : line.stations) {
-      std::cout << station.name << ' ' << station.time_to_next << '\n';
+  for (auto idk : umap) {
+    std::cout << idk.first << ":\n";
+
+    for (auto edge : idk.second) {
+      std::cout << edge.line << ' ' << edge.taget << ' ' << edge.weight << '\n';
     }
-    std::cout << '\n';
   }
 
   return 0;
