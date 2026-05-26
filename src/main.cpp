@@ -65,29 +65,40 @@ std::unordered_map<std::string, std::vector<Edge>> load_data(const char *path) {
   std::vector<std::string> items;
 
   std::unordered_map<std::string, std::vector<Edge>> umap;
-  int ttn = 0;
-  size_t window_size = 3;
+  int ttn = 0, ttp = 0;
 
   // Sliding window inspired
   while (std::getline(infile, str)) {
     items = split(str.c_str());
-    std::vector<Edge> edges;
 
-    for (size_t i = 1; i < items.size() - window_size; i += 2) {
-      if (i + 1 == items.size()) {
-        ttn = 0;
-      } else {
+    for (size_t i = 1; i < items.size(); i += 2) {
+      std::vector<Edge> edges;
+
+      if (i + 1 < items.size()) {
         try {
           ttn = std::stoi(items[i + 1]);
         } catch (std::exception &) {
         }
       }
 
-      edges.emplace_back(
-          Edge{.line = items[0], .taget = items[i], .weight = ttn});
+      if (i > 0) {
+        try {
+          ttp = std::stoi(items[i - 1]);
+        } catch (std::exception &) {
+        }
+      }
+
+      if (i + 3 <= items.size()) {
+        umap[items[i]].emplace_back(
+            Edge{.line = items[0], .taget = items[i + 2], .weight = ttn});
+      }
+
+      if (i > 2) {
+        umap[items[i]].emplace_back(
+            Edge{.line = items[0], .taget = items[i - 2], .weight = ttp});
+      }
     }
 
-    umap.insert({items[0], edges});
     break;
   }
 
@@ -97,16 +108,25 @@ std::unordered_map<std::string, std::vector<Edge>> load_data(const char *path) {
 int main(int argc, char *argv[]) {
   std::unordered_map<std::string, std::vector<Edge>> umap;
 
-  if (argc >= 1) {
-    umap = load_data(argv[1]);
+  if (argc < 3) {
+    std::cout << "Invalid arguments\n"
+              << "find_path <file> <start> <end>";
   }
 
-  for (auto idk : umap) {
-    std::cout << idk.first << ":\n";
+  umap = load_data(argv[1]);
 
-    for (auto edge : idk.second) {
-      std::cout << edge.line << ' ' << edge.taget << ' ' << edge.weight << '\n';
+  std::cout << "key 1: " << argv[2] << '\n';
+  std::cout << "key 2: " << argv[3] << '\n';
+
+  for (auto edge : umap) {
+    std::cout << edge.first << ":\n";
+
+    for (auto edge : edge.second) {
+      std::cout << "  " << edge.line << ' ' << edge.taget << ' ' << edge.weight
+                << '\n';
     }
+
+    // std::cout << '\n';
   }
 
   return 0;
