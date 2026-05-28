@@ -204,6 +204,8 @@ int main(int argc, char *argv[]) {
   if (argc < 3) {
     std::cout << "Invalid arguments\n"
               << "find_path <file> <start> <end>";
+
+    return -1;
   }
 
   graph = load_data(argv[1]);
