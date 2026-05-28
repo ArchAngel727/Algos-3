@@ -15,7 +15,12 @@ struct Edge {
   int weight;
 };
 
-std::vector<std::string> split(const char *buffer) {
+struct Previous {
+  std::string station;
+  std::string line;
+};
+
+std::vector<std::string> parse(const char *buffer) {
   std::string accumulator;
   std::vector<std::string> vec;
   int counter = 0;
@@ -75,7 +80,7 @@ std::unordered_map<std::string, std::vector<Edge>> load_data(const char *path) {
 
   // Sliding window inspired
   while (std::getline(infile, str)) {
-    items = split(str.c_str());
+    items = parse(str.c_str());
 
     for (size_t i = 1; i < items.size(); i += 2) {
       std::vector<Edge> edges;
@@ -109,12 +114,12 @@ std::unordered_map<std::string, std::vector<Edge>> load_data(const char *path) {
   return umap;
 }
 
-std::pair<std::unordered_map<std::string, std::string>,
+std::pair<std::unordered_map<std::string, Previous>,
           std::unordered_map<std::string, int>>
 djikstar(const std::string &start, const std::string &end,
          const std::unordered_map<std::string, std::vector<Edge>> &graph) {
   std::unordered_map<std::string, int> distance;
-  std::unordered_map<std::string, std::string> previous;
+  std::unordered_map<std::string, Previous> previous;
   std::priority_queue<std::pair<int, std::string>,
                       std::vector<std::pair<int, std::string>>, std::greater<>>
       pq;
@@ -143,7 +148,7 @@ djikstar(const std::string &start, const std::string &end,
 
       if (new_dist < distance[edge.target]) {
         distance[edge.target] = new_dist;
-        previous[edge.target] = station;
+        previous[edge.target] = {station, edge.line};
         pq.push({new_dist, edge.target});
       }
     }
@@ -153,24 +158,40 @@ djikstar(const std::string &start, const std::string &end,
 }
 
 void print_path(const std::string &start, const std::string &end,
-                const std::unordered_map<std::string, std::string> &previous,
+                const std::unordered_map<std::string, Previous> &previous,
                 const std::unordered_map<std::string, int> &distance) {
-  std::vector<std::string> path;
+  std::vector<std::pair<std::string, std::string>> path;
   std::string current = end;
+  std::string current_line = "";
 
   while (current != start) {
-    path.push_back(current);
-    current = previous.at(current);
+    const auto &info = previous.at(current);
+    path.push_back({current, info.line});
+    current = previous.at(current).station;
   }
-  path.push_back(start);
+  path.push_back({start, ""});
 
   std::reverse(path.begin(), path.end());
 
-  for (auto it = path.begin(); it != path.end(); it++) {
-    std::cout << *it;
+  if (path.size() < 2) {
+    std::cout << path[0].first;
+    return;
+  }
 
-    if (std::next(it) != path.end()) {
-      std::cout << " -> ";
+  for (size_t i = 0; i < path.size(); ++i) {
+    const auto &[station, line] = path[i];
+
+    if (i == 0) {
+      continue;
+    } else if (i == 1) {
+      current_line = line;
+      std::cout << line << ": " << path[0].first << " -> " << station;
+    } else if (line != current_line) {
+      std::cout << "\nUmsteigen in " << line << '\n';
+      std::cout << line << ": " << path[i - 1].first << " -> " << station;
+      current_line = line;
+    } else {
+      std::cout << " -> " << station;
     }
   }
 
