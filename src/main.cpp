@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <climits>
+#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -201,10 +202,15 @@ void print_path(const std::string &start, const std::string &end,
 int main(int argc, char *argv[]) {
   std::unordered_map<std::string, std::vector<Edge>> graph;
 
-  if (argc < 3) {
+  if (argc < 4) {
     std::cout << "Invalid arguments\n"
               << "find_path <file> <start> <end>";
 
+    return -1;
+  }
+
+  if (!std::filesystem::exists(argv[1])) {
+    std::cout << "File \"" << argv[1] << "\" does not exist";
     return -1;
   }
 
