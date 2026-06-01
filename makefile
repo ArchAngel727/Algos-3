@@ -1,6 +1,6 @@
 # Makefile
 CXX := clang++
-CXXFLAGS := -std=c++20 -g -O0 -Wall -Wextra -Iheaders
+CXXFLAGS := -std=c++20 -O2 -Wall -Wextra -Iheaders
 
 SRC_DIR := src
 OBJ_DIR := build
